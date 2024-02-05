@@ -53,7 +53,40 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //Debug 
+        debug_text.text = "Wish Dir: " + wish_dir.ToString();
+        debug_text.text += "\nPlayer Velocity: " + player_velocity.ToString();
+        debug_text.text += "\nPlayer Speed: " + new Vector3(player_velocity.x, 0, player_velocity.z).magnitude.ToString();
+        debug_text.text += "\nGrounded: " + grounded.ToString();
+
         Look();
+    }
+
+    private void FixedUpdate()
+    {
+        //Find wish dir
+        wish_dir = transform.right * move_input.x + transform.forward * move_input.y;
+        wish_dir = wish_dir.normalized;
+
+        grounded = character_controller.isGrounded;
+        if(grounded)
+        {
+            player_velocity = MoveGround(wish_dir, player_velocity);
+        }
+        else
+        {
+            player_velocity = MoveAir (wish_dir, player_velocity);
+        }
+
+        //Gravity
+        player_velocity.y -= gravity * Time.deltaTime;
+        if(grounded && player_velocity.y < 0) //Cap Y velocity on ground
+        {
+            player_velocity.y = -2;
+        }
+
+        //Move the Player
+        character_controller.Move(player_velocity * Time.deltaTime);
     }
 
     public void GetLookInput(InputAction.CallbackContext context)
@@ -86,11 +119,11 @@ public class PlayerController : MonoBehaviour
     {
         if (grounded)
         {
-            //DO THIS LATER...
+            player_velocity.y = jump_impulse;
         }
     }
 
-    private Vector3 Accelerate(Vector3 wish_dir, Vector3 current_velocity, float max_speed)
+    private Vector3 Accelerate(Vector3 wish_dir, Vector3 current_velocity, float accel, float max_speed)
     {
         //Project current_velocity on to the wish_dir
         float proj_speed = Vector3.Dot(current_velocity, wish_dir);
@@ -107,7 +140,7 @@ public class PlayerController : MonoBehaviour
         Vector3 new_velocity = new Vector3(current_velocity.x, 0, current_velocity.z);
 
         float speed = new_velocity.magnitude;
-        if (speed <= stop_speed
+        if (speed <= stop_speed)
         {
             new_velocity = Vector3.zero;
             speed = 0;
@@ -121,6 +154,7 @@ public class PlayerController : MonoBehaviour
 
         return Accelerate(wish_dir, new_velocity, acceleration, max_speed);
     }
+
     private Vector3 MoveAir(Vector3 wish_dir, Vector3 current_velocity)
     {
         return Accelerate(wish_dir, current_velocity, acceleration, max_speed);
